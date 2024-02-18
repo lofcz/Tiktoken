@@ -288,8 +288,12 @@ public class CoreBpe
         
         var values = new List<Tuple<string, int>>();
         var textSpan = text.AsSpan();
-
         var specialTokens = new List<(int Index, int Length)>(capacity: 32);
+        
+        int accuCount = 1;
+        bool highSurrogate = false;
+        int surrogateCount = 0;
+        string highSurrogatePair = string.Empty;
 
         foreach (var match in SpecialRegex.EnumerateMatches(textSpan))
         {
@@ -300,6 +304,13 @@ public class CoreBpe
             }
             if (allowedSpecial.Contains(value))
             {
+                if (highSurrogate)
+                {
+                    values.Add(new Tuple<string, int>(highSurrogatePair, surrogateCount));
+                    surrogateCount = 0;
+                    highSurrogate = false;
+                }
+                
                 specialTokens.Add((match.Index, match.Length));
             }
             else
@@ -323,6 +334,13 @@ public class CoreBpe
                 var piece = System.Text.Encoding.UTF8.GetBytes(matchValue);
                 if (Encoder.ContainsKey(piece))
                 {
+                    if (highSurrogate)
+                    {
+                        values.Add(new Tuple<string, int>(highSurrogatePair, surrogateCount));
+                        surrogateCount = 0;
+                        highSurrogate = false;
+                    }
+                    
                     values.Add(new Tuple<string, int>(fastKey, 1));
                     continue;
                 }
@@ -330,25 +348,31 @@ public class CoreBpe
                 var pair = BytePairEncoding.BytePairExplore(piece, Encoder);
                 
                 accumulatedBytes.Clear();
-                int accuCount = 1;
-                bool highSurrogate = false;
-                int surrogateCount = 0;
-                string highSurrogatePair = string.Empty;
 
                 for (int i = 0; i < pair.Count; i++)
                 {
-                    var currentPair = pair[i];
-                    
+                    byte[] currentPair = pair[i];
                     accumulatedBytes.AddRange(currentPair);
                     byte[] accuArr = [.. accumulatedBytes];
                     
                     if (Utf8.IsValid(accuArr))
                     {
-                        var value = System.Text.Encoding.UTF8.GetString(accuArr);
+                        string value = System.Text.Encoding.UTF8.GetString(accuArr);
 
                         if (highSurrogate)
                         {
-                            values.Add(new Tuple<string, int>($"{highSurrogatePair}{value}", accuCount + surrogateCount));
+                            string possiblePair = $"{highSurrogatePair}{value}";
+                            
+                            if (char.IsSurrogatePair(possiblePair, 0))
+                            {
+                                values.Add(new Tuple<string, int>($"{highSurrogatePair}{value}", accuCount + surrogateCount));    
+                            }
+                            else
+                            {
+                                values.Add(new Tuple<string, int>(highSurrogatePair, accuCount));
+                                values.Add(new Tuple<string, int>(value, surrogateCount));
+                            }
+                            
                             highSurrogate = false;
                             highSurrogatePair = string.Empty;
                         }
@@ -407,7 +431,7 @@ public class CoreBpe
         var ret = new List<byte>(tokens.Count * 2);
         foreach (var token in tokens)
         {
-            byte[] tokenBytes = Array.Empty<byte>();
+            byte[] tokenBytes = [];
             if (Decoder.TryGetValue(token, out var value))
             {
                 tokenBytes = value;
