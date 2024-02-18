@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <NoWarn>$(NoWarn);CA1724</NoWarn>
+        <TargetFramework>net8.0</TargetFramework>
+        <PackageId>Lofcz.Forks.Tiktoken</PackageId>
+        <Version>1.1.4</Version>
+        <Authors>tryAGI, aiqinxuancai, Matěj Štágl and contributors</Authors>
+    </PropertyGroup>
+    
+    <PropertyGroup Label="NuGet">
+        <Description>The fastest tokenizer for GPT-3.5 and GPT-4 inspired by Tiktoken. This fork contains a printable version of Explore()</Description>
+        <PackageTags>chatgpt;openai;tiktoken;tokens;gpt-4;gpt-3.5-turbo;cl100k_base;p50k_base</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup Label="Usings">
+        <Using Remove="System.Net.Http" />
+    </ItemGroup>
+
+    <ItemGroup Label="Resources">
+        <EmbeddedResource Include="Encodings/*.tiktoken" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="PolySharp">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+</Project>
