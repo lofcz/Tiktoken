@@ -331,6 +331,9 @@ public class CoreBpe
                 
                 accumulatedBytes.Clear();
                 int accuCount = 1;
+                bool highSurrogate = false;
+                int surrogateCount = 0;
+                string highSurrogatePair = string.Empty;
 
                 for (int i = 0; i < pair.Count; i++)
                 {
@@ -342,9 +345,29 @@ public class CoreBpe
                     if (Utf8.IsValid(accuArr))
                     {
                         var value = System.Text.Encoding.UTF8.GetString(accuArr);
-                        values.Add(new Tuple<string, int>(value, accuCount));  
+
+                        if (highSurrogate)
+                        {
+                            values.Add(new Tuple<string, int>($"{highSurrogatePair}{value}", accuCount + surrogateCount));
+                            highSurrogate = false;
+                            highSurrogatePair = string.Empty;
+                        }
+                        else
+                        {
+                            if (char.IsHighSurrogate(value[0]))
+                            {
+                                highSurrogate = true;
+                                highSurrogatePair = value;
+                                surrogateCount = accuCount;
+                            }
+                            else
+                            {
+                                values.Add(new Tuple<string, int>(value, accuCount));
+                            }   
+                        }
+                        
                         accumulatedBytes.Clear();
-                        accuCount = 1;
+                        accuCount = 1;   
                     }
                     else
                     {
@@ -355,7 +378,7 @@ public class CoreBpe
                 if (accumulatedBytes.Count > 0)
                 {
                     var value = System.Text.Encoding.UTF8.GetString([.. accumulatedBytes]);
-                    values.Add(new Tuple<string, int>(value, accuCount));  
+                    values.Add(new Tuple<string, int>(value, accuCount));
                     accumulatedBytes.Clear();
                 }
             }

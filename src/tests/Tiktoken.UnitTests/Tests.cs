@@ -148,7 +148,24 @@ public partial class Tests
         
         foreach (Tuple<string, int> token in tokens)
         {
-            token.Should().Be(expected[i]);
+            token.Item1.Should().Be(expected[i]);
+            i++;
+        }
+    }
+    
+    [TestMethod]
+    public void ExploreUtfBoundaryEmoji()
+    {
+        var text = "\ud83e\udd1a\ud83c\udffe";
+        IReadOnlyCollection<Tuple<string, int>> tokens = Encoding.ForModel("gpt-4").ExploreUtfSafe(text);
+        List<string> expected = new List<string> { "🤚🏾" };
+        int i = 0;
+
+        tokens.Count.Should().Be(expected.Count);
+        
+        foreach (Tuple<string, int> token in tokens)
+        {
+            token.Item1.Should().Be(expected[i]);
             i++;
         }
     }
